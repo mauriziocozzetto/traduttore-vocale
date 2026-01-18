@@ -4,19 +4,28 @@ import speech_recognition as sr
 from googletrans import Translator
 from gtts import gTTS
 import io
+from pydub import AudioSegment
 
-# Funzione per convertire l'audio in testo
 def transcribe_audio(audio_bytes, language_code):
     r = sr.Recognizer()
-    audio_file = io.BytesIO(audio_bytes)
-    with sr.AudioFile(audio_file) as source:
-        audio_data = r.record(source)
-        try:
-            # Riconoscimento vocale tramite Google
+    
+    try:
+        # 1. Carica i bytes (che arrivano come WebM dal browser) tramite pydub
+        audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes))
+        
+        # 2. Converti in WAV (PCM) in memoria
+        wav_io = io.BytesIO()
+        audio_segment.export(wav_io, format="wav")
+        wav_io.seek(0)
+        
+        # 3. Ora SpeechRecognition può leggerlo correttamente
+        with sr.AudioFile(wav_io) as source:
+            audio_data = r.record(source)
             text = r.recognize_google(audio_data, language=language_code)
             return text
-        except Exception as e:
-            return None
+    except Exception as e:
+        st.error(f"Errore tecnico: {e}")
+        return None
 
 # Configurazione Pagina
 st.set_page_config(page_title="Traduttore Vocale Cloud", page_icon="🎤")
@@ -70,4 +79,5 @@ if audio_input:
             st.error("Non ho potuto riconoscere la voce. Riprova parlando più chiaramente.")
 
 st.divider()
+
 st.caption("Sviluppato con Streamlit, SpeechRecognition e gTTS (Senza PyAudio)")
